@@ -1,0 +1,7 @@
+[project]
+name = "controle-de-ruido"
+version = "0.1.0"
+description = "EAC1051"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
