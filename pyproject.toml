@@ -9,7 +9,6 @@ dependencies = [
     "mpmath>=1.3.0",
     "nbformat>=5.10.4",
     "numpy>=2.2.5",
-    "numpy-groupies>=0.11.3",
     "pandas>=2.2.3",
     "plotly>=6.0.1",
     "polars>=1.29.0",
@@ -31,4 +30,4 @@ dev = [
 tmm = { git = "https://github.com/rinaldipp/tmm.git" }
 
 [tool.ruff]
-line-length = 160
+line-length = 120
