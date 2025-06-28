@@ -301,12 +301,16 @@ contour_pressures = (
     .to_numpy()
 )
 
+max_abs_val = np.nanmax(np.abs(contour_pressures))
+vmin, vmax = -max_abs_val, max_abs_val
+
 fig, ax = plt.subplots(figsize=(10, 5), constrained_layout=True)
-contour = plt.contourf(xx, zz, contour_pressures, levels=50, cmap="inferno", norm="linear", extend="neither")
+contour = plt.contourf(xx, zz, contour_pressures, levels=50, vmin=vmin, vmax=vmax, cmap="seismic", norm="linear", extend="neither")
 contour.set_edgecolor("face")
 
-plt.colorbar(format="%.1f", label=r"$\mathfrak{Re}(p)$", spacing="uniform")
+plt.colorbar(format="%.1f", label=r"$\mathfrak{Re}(p)$ [Pa]", spacing="uniform", fraction=0.024, pad=0.04)
 ax.set_xlabel("x [m]", labelpad=0)
 ax.set_ylabel("z [m]", labelpad=5)
-# plt.savefig("contourplot_xz_3khz.svg", format="svg", bbox_inches="tight")
+ax.set_aspect('equal', adjustable='box')
+plt.savefig("contourplot_xz_3khz.svg", format="svg", bbox_inches="tight")
 plt.show()
