@@ -11,7 +11,7 @@ Undergraduate course at UFSM lectured by Dr. Paulo Mareze.
 - Comparisons with the analytical models (exact and far field approximation) seen on Kinsler's Fundamentals of Acoustics (4th ed), chapter 7.
 
 ## Transformer noise calculator
-- Calculates the sound power level and pressule level for the noise of an industrial transformer humming indoors.
+- Calculates the sound power level and sound pressure level for the noise of an industrial transformer humming indoors.
 - Equations taken from Barron's Industrial Noise Control and Acoustics (1st ed).
 
 ## Installation
