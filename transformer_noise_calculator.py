@@ -67,7 +67,7 @@ if __name__ == "__main__":
 
     print("\n----------------------------")
     print("Resultados:\n")
-    print(f"Nível de potência global, sem ponderação: {Lw} [W]")
-    print(f"Nível de potência por banda de oitava, sem ponderação:       {Lw_oct} [W]")
-    print(f"Nível de pressão sonora por banda de oitava, sem ponderação: {Lp_oct} [W]")
+    print(f"Nível de potência global, sem ponderação: {Lw} [dB]")
+    print(f"Nível de potência por banda de oitava, sem ponderação:       {Lw_oct} [dB]")
+    print(f"Nível de pressão sonora por banda de oitava, sem ponderação: {Lp_oct} [dB]")
     print("----------------------------")

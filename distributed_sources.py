@@ -13,6 +13,7 @@ p_ref = 2e-5  # [Pa]
 a = 28e-2 / 2  # [m]
 space_discretization = 0.028  # [m]
 
+
 def get_distances_to_field_points(elements_with_coordinates: pl.DataFrame, field_points: pl.DataFrame) -> pl.DataFrame:
     return elements_with_coordinates.join(field_points, how="cross").select(
         pl.col("field_point_id", "area"),
@@ -83,8 +84,9 @@ def analytic_lp_per_frequency(analytic_pressure_per_frequency: NDArray[np.float6
 
 
 def kinsler_pressure_per_frequency(velocities_array: NDArray[np.float64], r: float) -> NDArray[np.float64]:
-    decay_factor = 1 - np.exp(1j*velocities_array["k"]*(np.sqrt(r**2 + a**2) - r))
-    return rho0*c0*velocities_array["u"]*decay_factor*np.exp(1j*velocities_array["k"]*r)
+    decay_factor = 1 - np.exp(1j * velocities_array["k"] * (np.sqrt(r**2 + a**2) - r))
+    return rho0 * c0 * velocities_array["u"] * decay_factor * np.exp(1j * velocities_array["k"] * r)
+
 
 def create_arc_points(center_x, center_y, radius, start_angle_deg, end_angle_deg, spacing):
     angles = np.arange(start_angle_deg, end_angle_deg + spacing, spacing)
@@ -92,6 +94,7 @@ def create_arc_points(center_x, center_y, radius, start_angle_deg, end_angle_deg
     y_coords = center_y + radius * np.sin(angles_rad)
     z_coords = center_x + radius * np.cos(angles_rad)
     return angles_rad, z_coords, y_coords
+
 
 # %% import data
 elements_schema = {
@@ -208,11 +211,22 @@ kinsler_analytic_pressure = kinsler_pressure_per_frequency(velocity_2khz_array, 
 categories = [r"$\mathfrak{Re}(p)$", r"$\mathfrak{Im}(p)$"]
 fig, ax = plt.subplots(figsize=(8, 5))
 (p1,) = ax.plot(
-    r, np.real(kinsler_analytic_pressure), label=r"Analítico, $\mathfrak{Re}(p)$", linestyle="--", linewidth=2, color="black",
+    r,
+    np.real(kinsler_analytic_pressure),
+    label=r"Analítico, $\mathfrak{Re}(p)$",
+    linestyle="--",
+    linewidth=2,
+    color="black",
 )
 
 (p1_farfield,) = ax.plot(
-    r, np.real(analytic_pressure), label=r"Analítico - campo distante, $\mathfrak{Re}(p)$", linestyle="-.", linewidth=1, color="black", alpha=0.4
+    r,
+    np.real(analytic_pressure),
+    label=r"Analítico - campo distante, $\mathfrak{Re}(p)$",
+    linestyle="-.",
+    linewidth=1,
+    color="black",
+    alpha=0.4,
 )
 
 (p2,) = ax.plot(
@@ -237,7 +251,7 @@ fig, ax = plt.subplots(figsize=(8, 5))
     linestyle="-.",
     linewidth=1,
     color="darkgreen",
-    alpha=0.4
+    alpha=0.4,
 )
 
 
@@ -255,7 +269,12 @@ ax.grid()
 ax.set_xlim(0, 0.4)
 ax.set_ylim(-40, 40)
 
-ax.legend([p5, p1_farfield, p3_farfield, p5, p1, p3, p5, p2, p4], [r"Campo distante"] + categories + [r"Analítico"] + categories + ["Simulado"] + categories, loc="lower right", ncol=3)
+ax.legend(
+    [p5, p1_farfield, p3_farfield, p5, p1, p3, p5, p2, p4],
+    [r"Campo distante"] + categories + [r"Analítico"] + categories + ["Simulado"] + categories,
+    loc="lower right",
+    ncol=3,
+)
 
 plt.savefig("analitico_vs_simulado_eixo_z_2khz.svg", format="svg", bbox_inches="tight")
 
