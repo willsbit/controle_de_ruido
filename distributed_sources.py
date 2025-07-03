@@ -5,15 +5,13 @@ import matplotlib.ticker as plticker
 from tmm import _utils as utils
 from numpy.typing import NDArray, ArrayLike
 from scipy.special import j1
-# %matplotlib inline
 
 
 c0 = 343  # [m/s]
 rho0 = 1.2  # [kg/m^3]
 p_ref = 2e-5  # [Pa]
-a = 28e-3 / 2  # [m]
+a = 28e-2 / 2  # [m]
 space_discretization = 0.028  # [m]
-
 
 def get_distances_to_field_points(elements_with_coordinates: pl.DataFrame, field_points: pl.DataFrame) -> pl.DataFrame:
     return elements_with_coordinates.join(field_points, how="cross").select(
@@ -84,6 +82,10 @@ def analytic_lp_per_frequency(analytic_pressure_per_frequency: NDArray[np.float6
     )
 
 
+def kinsler_pressure_per_frequency(velocities_array: NDArray[np.float64], r: float) -> NDArray[np.float64]:
+    decay_factor = 1 - np.exp(1j*velocities_array["k"]*(np.sqrt(r**2 + a**2) - r))
+    return rho0*c0*velocities_array["u"]*decay_factor*np.exp(1j*velocities_array["k"]*r)
+
 def create_arc_points(center_x, center_y, radius, start_angle_deg, end_angle_deg, spacing):
     angles = np.arange(start_angle_deg, end_angle_deg + spacing, spacing)
     angles_rad = np.deg2rad(angles)
@@ -91,7 +93,7 @@ def create_arc_points(center_x, center_y, radius, start_angle_deg, end_angle_deg
     z_coords = center_x + radius * np.cos(angles_rad)
     return angles_rad, z_coords, y_coords
 
-
+# %% import data
 elements_schema = {
     "node1": pl.UInt32,
     "node2": pl.UInt32,
@@ -111,7 +113,7 @@ nodes = (
         new_columns=["x", "y", "z"],
     )
     .with_row_index(name="node", offset=1)
-    .with_columns(pl.col("x", "y", "z") / 10)
+    .with_columns(pl.col("x", "y", "z"))
 )
 
 velocity = pl.read_csv(
@@ -171,7 +173,7 @@ analytic_pressure = analytic_pressure_per_frequency(velocities_array, r, 0)
 analytic_Lp = analytic_lp_per_frequency(analytic_pressure)
 
 fig, ax = plt.subplots(figsize=(8, 5))
-ax.semilogx(velocities_array["frequency"], analytic_Lp, label="Modelo analítico", linestyle="--", linewidth=2)
+ax.semilogx(velocities_array["frequency"], analytic_Lp, label="Campo distante", linestyle="--", linewidth=2)
 ax.semilogx(lp_per_frequency.select("frequency"), lp_per_frequency.select("Lp"), label="Simulado", alpha=0.8)
 
 center_frequencies = utils.nth_octave(1, fmin=10, fmax=5000)[:, 1]
@@ -182,9 +184,9 @@ ax.set_xticks([], minor=True)
 ax.set_xticklabels([str(int(f)) if f.is_integer() else str(f) for f in center_frequencies])
 ax.grid()
 ax.set_xlim(10, 5000)
-ax.set_ylim(0, 80)
+ax.set_ylim(0, 120)
 ax.legend(loc="upper left")
-# plt.savefig("analitico_vs_simulado_1m.svg", format="svg", bbox_inches="tight")
+plt.savefig("analitico_vs_simulado_1m.svg", format="svg", bbox_inches="tight")
 
 
 # %% b)
@@ -201,13 +203,18 @@ pressure_per_frequency = calculate_pressure_per_frequency(elements_with_euclidea
 )
 
 analytic_pressure = analytic_pressure_per_frequency(velocity_2khz_array, r, 0)
-
+kinsler_analytic_pressure = kinsler_pressure_per_frequency(velocity_2khz_array, r)
 
 categories = [r"$\mathfrak{Re}(p)$", r"$\mathfrak{Im}(p)$"]
 fig, ax = plt.subplots(figsize=(8, 5))
 (p1,) = ax.plot(
-    r, np.real(analytic_pressure), label=r"Analítico, $\mathfrak{Re}(p)$", linestyle="--", linewidth=2, color="black"
+    r, np.real(kinsler_analytic_pressure), label=r"Analítico, $\mathfrak{Re}(p)$", linestyle="--", linewidth=2, color="black",
 )
+
+(p1_farfield,) = ax.plot(
+    r, np.real(analytic_pressure), label=r"Analítico - campo distante, $\mathfrak{Re}(p)$", linestyle="-.", linewidth=1, color="black", alpha=0.4
+)
+
 (p2,) = ax.plot(
     pressure_per_frequency.select("z"),
     pressure_per_frequency.select("re"),
@@ -216,12 +223,24 @@ fig, ax = plt.subplots(figsize=(8, 5))
 )
 (p3,) = ax.plot(
     r,
-    np.imag(analytic_pressure),
+    np.imag(kinsler_analytic_pressure),
     label=r"Analítico, $\mathfrak{Im}(p)$",
     linestyle="--",
     linewidth=2,
     color="darkgreen",
 )
+
+(p3_farfield,) = ax.plot(
+    r,
+    np.imag(analytic_pressure),
+    label=r"Analítico - campo distante, $\mathfrak{Im}(p)$",
+    linestyle="-.",
+    linewidth=1,
+    color="darkgreen",
+    alpha=0.4
+)
+
+
 (p4,) = ax.plot(
     pressure_per_frequency.select("z"),
     pressure_per_frequency.select("im"),
@@ -231,14 +250,14 @@ fig, ax = plt.subplots(figsize=(8, 5))
 (p5,) = ax.plot([0], marker="None", linestyle="None", label="dummy-tophead")
 
 ax.set_xlabel(r"Coordenada $z$ [m]")
-ax.set_ylabel(r"$L_p$ [dB]")
+ax.set_ylabel(r"$p$ [Pa]")
 ax.grid()
 ax.set_xlim(0, 0.4)
-ax.set_ylim(-0.8, 0.45)
+ax.set_ylim(-40, 40)
 
-ax.legend([p5, p1, p3, p5, p2, p4], [r"Analítico"] + categories + ["Simulado"] + categories, loc="best", ncol=2)
+ax.legend([p5, p1_farfield, p3_farfield, p5, p1, p3, p5, p2, p4], [r"Campo distante"] + categories + [r"Analítico"] + categories + ["Simulado"] + categories, loc="lower right", ncol=3)
 
-# plt.savefig("analitico_vs_simulado_eixo_z_2khz.svg", format="svg", bbox_inches="tight")
+plt.savefig("analitico_vs_simulado_eixo_z_2khz.svg", format="svg", bbox_inches="tight")
 
 
 # %% c)
@@ -274,16 +293,16 @@ ax.plot(
     color="orange",
     linewidth=2,
 )
-ax.plot(theta, analytic_directivity, label="Analítico", color="C2", linewidth=2)
+ax.plot(theta, analytic_directivity, label="Campo distante", linestyle="--", alpha=0.8)
 ax.set_theta_zero_location("N")  # 0 degrees at the top
 ax.set_theta_direction(-1)  # clockwise
-ax.set_rlabel_position(90)  # move labels to the side
 ax.legend(loc="best")
-ax.set_xticks(np.deg2rad([-90, -45, 0, 45, 90]))
+ax.set_rticks([0, -10, -20, -30])
 ax.set_thetalim(np.deg2rad([-90, 90]))
+ax.set_xlabel("Diretividade [dB]")
+ax.xaxis.set_label_coords(0.5, 0.15)
+plt.savefig("diretividade_2khz.svg", format="svg", bbox_inches="tight")
 plt.show()
-# check about the nodes mesh later
-
 
 # %% d)
 velocity_3khz = velocities_per_frequency.filter(pl.col("frequency") == 3001)
@@ -313,13 +332,13 @@ vmin, vmax = -max_abs_val, max_abs_val
 
 fig, ax = plt.subplots(figsize=(10, 5), constrained_layout=True)
 contour = plt.contourf(
-    xx, zz, contour_pressures, levels=50, vmin=vmin, vmax=vmax, cmap="seismic", norm="linear", extend="neither"
+    zz, xx, contour_pressures, levels=1000, vmin=vmin, vmax=vmax, cmap="seismic", norm="linear", extend="neither"
 )
 contour.set_edgecolor("face")
 
-plt.colorbar(format="%.1f", label=r"$\mathfrak{Re}(p)$ [Pa]", spacing="uniform", fraction=0.024, pad=0.04)
-ax.set_xlabel("x [m]", labelpad=0)
-ax.set_ylabel("z [m]", labelpad=5)
+plt.colorbar(format="%.1f", label=r"$\mathfrak{Re}(p)$ [Pa]", spacing="uniform", fraction=0.028, pad=0.01)
+ax.set_xlabel("z [m]", labelpad=0)
+ax.set_ylabel("x [m]", labelpad=5)
 ax.set_aspect("equal", adjustable="box")
 plt.savefig("contourplot_xz_3khz.svg", format="svg", bbox_inches="tight")
 plt.show()
