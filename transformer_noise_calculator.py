@@ -1,6 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from enum import Enum
-
+plt.rcParams.update({"font.size": 12})
 np.set_printoptions(precision=1, floatmode="fixed")
 
 RefrigerationType = Enum("auto_refrigerado", "refrigeracao_forcada")
@@ -65,9 +66,41 @@ if __name__ == "__main__":
         + 10 * np.log10((rho0 * c0 * W_ref) / (p_ref**2))
     )
 
+    # sum octave bands into total sound pressure level
+    Lp = 10*np.log10(np.sum(10 ** (Lp_oct / 10)))
+
+
     print("\n----------------------------")
     print("Resultados:\n")
     print(f"Nível de potência global, sem ponderação: {Lw} [dB]")
     print(f"Nível de potência por banda de oitava, sem ponderação:       {Lw_oct} [dB]")
     print(f"Nível de pressão sonora por banda de oitava, sem ponderação: {Lp_oct} [dB]")
     print("----------------------------")
+
+# %% sound pressure level plot
+fig, ax = plt.subplots(figsize=(8, 5))
+b = ax.bar(center_frequencies, Lp_oct, width=center_frequencies*.2)
+ax.set_xscale("log")
+ax.set_xticks(center_frequencies)
+ax.set_xticklabels([str(b) for b in center_frequencies])
+ax.set_xlabel("Frequência [Hz]")
+ax.set_ylabel("NPS [dB]")
+ax.set_title(f"NPS por banda de oitava, sem ponderação. NPS$_{{G}}$ = {Lp:.1f} [dB]")
+ax.bar_label(b, fmt='{:,.1f}')
+ax.set_ylim(0, 68)
+plt.savefig("transformer_spl.svg", format="svg", bbox_inches="tight")
+plt.show()
+
+# %% sound power level plot
+fig, ax = plt.subplots(figsize=(8, 5))
+b = ax.bar(center_frequencies, Lw_oct, width=center_frequencies*.2, color="orange")
+ax.set_xscale("log")
+ax.set_xticks(center_frequencies)
+ax.set_xticklabels([str(b) for b in center_frequencies])
+ax.set_xlabel("Frequência [Hz]")
+ax.set_ylabel("NWS [dB]")
+ax.set_title(f"NWS por banda de oitava, sem ponderação. NWS$_{{G}}$ = {Lw:.1f} [dB]")
+ax.bar_label(b, fmt='{:,.1f}')
+ax.set_ylim(0, 78)
+plt.savefig("transformer_swl.svg", format="svg", bbox_inches="tight")
+plt.show()
