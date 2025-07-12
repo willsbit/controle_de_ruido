@@ -15,6 +15,17 @@ space_discretization = 0.028  # [m]
 
 
 def get_distances_to_field_points(elements_with_coordinates: pl.DataFrame, field_points: pl.DataFrame) -> pl.DataFrame:
+    """
+    Calculate the euclidean distances between the center of each mesh element and the field points,
+    the outer points for which we want to calculate the pressure values.
+
+    Args:
+        elements_with_coordinates: DataFrame containing the coordinates of the mesh elements.
+        field_points: DataFrame containing the coordinates of the field points.
+
+    Returns:
+        DataFrame containing the distances between the center of each mesh element and the field points.
+    """
     return elements_with_coordinates.join(field_points, how="cross").select(
         pl.col("field_point_id", "area"),
         (
@@ -30,6 +41,17 @@ def get_distances_to_field_points(elements_with_coordinates: pl.DataFrame, field
 def calculate_pressure_per_frequency(
     elements_with_euclidean_distances: pl.DataFrame, velocities_per_frequency: pl.DataFrame
 ) -> pl.DataFrame:
+    """
+    Calculate the real and imaginary parts of the pressure, per frequency for each element.
+    This is done by calculating the Rayleigh integral summing the contributions of each monopole in the mesh centroids.
+
+    Args:
+        elements_with_euclidean_distances: DataFrame containing elements with their Euclidean distances. Should also contain the area for each mesh element.
+        velocities_per_frequency: DataFrame containing volume velocities of the piston per frequency.
+
+    Returns:
+        DataFrame containing the real and imaginary parts of the pressure, per frequency for each element.
+    """
     return (
         elements_with_euclidean_distances.join(velocities_per_frequency, how="cross")
         .with_columns(((pl.col("omega") * pl.col("u") * pl.col("area")) / pl.col("distance")).alias("mul_factors"))
@@ -49,6 +71,14 @@ def calculate_pressure_per_frequency(
 
 
 def calculate_lp_per_frequency(pressure_per_frequency: pl.DataFrame) -> pl.DataFrame:
+    """
+    Transforms the real and imaginary parts of the pressure into a logarithmic pressure level.
+
+    Args:
+        pressure_per_frequency: DataFrame containing the pressure data.
+    Returns:
+        DataFrame containing the logarithmic pressure level.
+    """
     return pressure_per_frequency.select(
         pl.col("field_point_id", "frequency"),
         (10 * ((0.5 * (pl.col("re").pow(2) + pl.col("im").pow(2))) / (p_ref**2)).log(base=10)).alias("Lp"),
@@ -58,6 +88,17 @@ def calculate_lp_per_frequency(pressure_per_frequency: pl.DataFrame) -> pl.DataF
 def analytic_pressure_per_frequency(
     velocities_array, r: NDArray[np.float64] | np.float64, theta: NDArray[np.float64] | np.float64
 ) -> NDArray[np.float64]:
+    """
+    Calculates pressure per point, per frequency using a far-field approximation.
+
+    Args:
+        velocities_array: DataFrame containing the velocity data.
+        r: radius, in meters.
+        theta: angle, in radians.
+
+    Returns:
+        Array containing the analytic pressure per frequency.
+    """
     bessel_argument = velocities_array["k"] * a * np.sin(theta)
     non_zero_mask = bessel_argument != 0
     bessel_term = np.ones_like(bessel_argument)
@@ -78,17 +119,51 @@ def analytic_pressure_per_frequency(
 
 
 def analytic_lp_per_frequency(analytic_pressure_per_frequency: NDArray[np.float64]) -> NDArray[np.float64]:
+    """
+    Calculate the analytic pressure level, per point, per frequency.
+
+    Args:
+        analytic_pressure_per_frequency: Array containing the analytic pressure per frequency for each field point.
+
+    Returns:
+        Array containing the analytic pressure level per frequency for each field point.
+    """
     return 10 * np.log10(
         (0.5 * np.real(analytic_pressure_per_frequency * np.conj(analytic_pressure_per_frequency))) / (p_ref**2)
     )
 
 
 def kinsler_pressure_per_frequency(velocities_array: NDArray[np.float64], r: float) -> NDArray[np.float64]:
+    """
+    Calculates pressure per point, per frequency using on the z-axis
+    using the expression seen on Kinsler's Fundamentals of Acoustics, chapter 7.
+
+    Args:
+        velocities_array: DataFrame containing the velocity data.
+        r: radius, in meters.
+
+    Returns:
+        Array containing the analytic pressure per frequency.
+    """
     decay_factor = 1 - np.exp(1j * velocities_array["k"] * (np.sqrt(r**2 + a**2) - r))
     return rho0 * c0 * velocities_array["u"] * decay_factor * np.exp(1j * velocities_array["k"] * r)
 
 
 def create_arc_points(center_x, center_y, radius, start_angle_deg, end_angle_deg, spacing):
+    """
+    Creates points along an arc defined by a center point, radius, and angle range.
+
+    Args:
+        center_x: x-coordinate of the center point.
+        center_y: y-coordinate of the center point.
+        radius: radius of the arc.
+        start_angle_deg: starting angle of the arc in degrees.
+        end_angle_deg: ending angle of the arc in degrees.
+        spacing: angular spacing between points in degrees.
+
+    Returns:
+        Tuple containing arrays of angles in radians, z-coordinates, and y-coordinates.
+    """
     angles = np.arange(start_angle_deg, end_angle_deg + spacing, spacing)
     angles_rad = np.deg2rad(angles)
     y_coords = center_y + radius * np.sin(angles_rad)

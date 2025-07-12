@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from enum import Enum
+
 plt.rcParams.update({"font.size": 12})
 np.set_printoptions(precision=1, floatmode="fixed")
 
@@ -67,8 +68,7 @@ if __name__ == "__main__":
     )
 
     # sum octave bands into total sound pressure level
-    Lp = 10*np.log10(np.sum(10 ** (Lp_oct / 10)))
-
+    Lp = 10 * np.log10(np.sum(10 ** (Lp_oct / 10)))
 
     print("\n----------------------------")
     print("Resultados:\n")
@@ -79,28 +79,28 @@ if __name__ == "__main__":
 
 # %% sound pressure level plot
 fig, ax = plt.subplots(figsize=(8, 5))
-b = ax.bar(center_frequencies, Lp_oct, width=center_frequencies*.2)
+b = ax.bar(center_frequencies, Lp_oct, width=center_frequencies * 0.2)
 ax.set_xscale("log")
 ax.set_xticks(center_frequencies)
 ax.set_xticklabels([str(b) for b in center_frequencies])
 ax.set_xlabel("Frequência [Hz]")
 ax.set_ylabel("NPS [dB]")
 ax.set_title(f"NPS por banda de oitava, sem ponderação. NPS$_{{G}}$ = {Lp:.1f} [dB]")
-ax.bar_label(b, fmt='{:,.1f}')
+ax.bar_label(b, fmt="{:,.1f}")
 ax.set_ylim(0, 68)
 plt.savefig("transformer_spl.svg", format="svg", bbox_inches="tight")
 plt.show()
 
 # %% sound power level plot
 fig, ax = plt.subplots(figsize=(8, 5))
-b = ax.bar(center_frequencies, Lw_oct, width=center_frequencies*.2, color="orange")
+b = ax.bar(center_frequencies, Lw_oct, width=center_frequencies * 0.2, color="orange")
 ax.set_xscale("log")
 ax.set_xticks(center_frequencies)
 ax.set_xticklabels([str(b) for b in center_frequencies])
 ax.set_xlabel("Frequência [Hz]")
 ax.set_ylabel("NWS [dB]")
 ax.set_title(f"NWS por banda de oitava, sem ponderação. NWS$_{{G}}$ = {Lw:.1f} [dB]")
-ax.bar_label(b, fmt='{:,.1f}')
+ax.bar_label(b, fmt="{:,.1f}")
 ax.set_ylim(0, 78)
 plt.savefig("transformer_swl.svg", format="svg", bbox_inches="tight")
 plt.show()
